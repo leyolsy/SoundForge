@@ -2,6 +2,8 @@ import os
 from pydub import AudioSegment
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler, CallbackContext
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 # Retrieve the bot token from environment variables
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -82,6 +84,21 @@ def convert_audio(update: Update, context: CallbackContext) -> None:
 # Error handler
 def error_handler(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Sorry, something went wrong. Please try again.")
+
+# HTTP server to keep the service running on Render
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Music Converter Bot is running...")
+
+def run_http_server():
+    server_address = ('0.0.0.0', 8000)  # Port 8000 (Render will check this)
+    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+    httpd.serve_forever()
+
+# Run the HTTP server in a separate thread to keep the service running
+threading.Thread(target=run_http_server).start()
 
 # Main function to set up the bot
 def main():
